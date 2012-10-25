@@ -20,6 +20,21 @@ int main(int argc, char* argv[])
 			"\t3 - downward saw\n\t4 - upward saw\n");
 		return 1;
 	}
+
+	PSF_PROPS props;
+	OSCIL** oscs = NULL;
+	double* oscfreqs = NULL;
+	float* outframe = NULL;
+	int ofd = -1;
+	int wavetype = atoi(argv[ARG_WAVETYPE]);
+	double dur;
+	double gain;
+	double val;
+	unsigned long totalframes;
+	unsigned long nframes;
+	unsigned long nbufs;
+	unsigned long remain;
+	unsigned long i, j, k;	
 	int noscs = 1;
 	char* oscflag = (char*) &argv[ARG_OSCFLAG][0];
 	if (oscflag && *oscflag == '-') {
@@ -35,41 +50,33 @@ int main(int argc, char* argv[])
 		/*	...*/
 	}
 	/*	TODO check that number of frequency args == noscs */
+
 	if (psf_init()) {
 		printf("failed to initialize portsf\n");
 		return 1;
 	}
 
-	PSF_PROPS props;
-	float* outframe = NULL;
-	int ofd = -1;
-	int wavetype = atoi(argv[ARG_WAVETYPE]);
-	double dur = atof(argv[ARG_DUR]);
+	dur = atof(argv[ARG_DUR]);
 	if (dur <= 0.0) {
 		printf("duration can't be negative or 0.\n");
 		return 1;
 	}
-	double gain = atof(argv[ARG_GAIN]);
+	gain = atof(argv[ARG_GAIN]);
 	if (gain > 1.0 || gain < 0.0) {
 		printf("0.0 <= gain <= 1.0\n");
 		return 1;
 	}
 	gain /= noscs;
 
-	double val;
-	unsigned long i, j, k;
-	OSCIL** oscs = NULL;
-	double* oscfreqs = NULL;
-
 	/*  The total number of frames that need
 		to be written. */
-	unsigned long totalframes = (unsigned long) (SRATE * dur + 0.5);
+	totalframes = (unsigned long) (SRATE * dur + 0.5);
 	/*  The number of frames in a buffer. */
-	unsigned long nframes = BUFSIZE;
+	nframes = BUFSIZE;
 	/*	The number of buffers of size nframes required. */
-	unsigned long nbufs = totalframes / BUFSIZE;
+	nbufs = totalframes / BUFSIZE;
 	/*	Any remainder from the division. */
-	unsigned long remain = totalframes - nbufs * BUFSIZE;
+	remain = totalframes - nbufs * BUFSIZE;
 	if (remain > 0) nbufs++;
 	
 	tickfunc tick;
