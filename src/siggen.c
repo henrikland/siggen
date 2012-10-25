@@ -14,24 +14,27 @@ int main(int argc, char* argv[])
 	if (argc < ARG_OSCFLAG) {
 		printf("\t##siggen - 3 oscillator signal generator##\n"
 			"\t__________________________________________\n"
-			"usage: siggen wavetype duration gain outfile"
+			"usage: siggen wavetype duration gain outfile "
 			"(optional) -n[Number of oscs] freq1 freq2 . . . freqN\n"
 			"wavetype:\n\t1 - sine\n\t2 - square\n"
 			"\t3 - downward saw\n\t4 - upward saw\n");
 		return 1;
 	}
 	int noscs = 1;
-	char* oscflag = argv[ARG_OSCFLAG];
+	char* oscflag = (char*) &argv[ARG_OSCFLAG][0];
 	if (oscflag && *oscflag == '-') {
-		if (*(oscflag++) == 'n') {
+		if (*(++oscflag) == 'n') {
 			oscflag++;
 			if (*oscflag < '1' || *oscflag > '9') {
 				printf("number of oscillators must be a number from 1-9\n");
 				return 1;
 			}
-			noscs = atoi(*oscflag);
+			noscs = *oscflag - '0';
 		}
+	} else {
+		/*	...*/
 	}
+	/*	TODO check that number of frequency args == noscs */
 	if (psf_init()) {
 		printf("failed to initialize portsf\n");
 		return 1;
@@ -112,13 +115,16 @@ int main(int argc, char* argv[])
 		oscs[i] = malloc(sizeof(OSCIL));
 		oscil_init(oscs[i], SRATE);
 	}
+
 	oscfreqs = malloc(sizeof(double) * noscs);
 	for (i = 0; i < noscs; ++i) {
-		/* 
-		oscfreqs[i] = atof(frekvensargument i);
-
-		*/
+		if (argv[ARG_FREQS + i]) {
+			oscfreqs[i] = atof(argv[ARG_FREQS + i]);
+		} else {
+			oscfreqs[i] = 0.0;
+		}
 	}
+
 	outframe = malloc(sizeof(float) * props.chans * nframes);
 
 	/*	For each buffer... */
@@ -129,12 +135,12 @@ int main(int argc, char* argv[])
 			nframes = remain;
 		}
 		/*	Fill up the frames in the buffer... */
-		for (j = 0; j < nframes; ++j) {	
+		for (j = 0; j < nframes; ++j) {
 			val = 0.0;
 			for (k = 0; k < noscs; ++k) {
-				val += (float) (tick(oscs[i], freq) * gain);
+				val += (float) (tick(oscs[k], oscfreqs[k]) * gain);
 			}
-			outframe[j] = val;			
+			outframe[j] = val;
 		}
 		/*	...and try to write the buffer to outfile. */
 		if (psf_sndWriteFloatFrames(ofd, outframe, nframes)
